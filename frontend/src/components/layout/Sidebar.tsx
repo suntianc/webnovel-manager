@@ -1,44 +1,130 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Icon } from "@/components/ui/Icon";
 
 const navItems = [
-  { href: '/', label: '首页看板', icon: '◉' },
-  { href: '/materials', label: '素材管理', icon: '◇' },
-  { href: '/search', label: '全文搜索', icon: '⌕' },
-  { href: '/tags', label: '标签管理', icon: '⌗' },
-  { href: '/categories', label: '分类管理', icon: '☰' },
+  { href: "/", label: "首页看板", icon: "layout" as const },
+  { href: "/workspace", label: "创作台", icon: "pen" as const },
+  { href: "/materials", label: "素材库", icon: "book" as const },
+  { href: "/collect-tasks", label: "采集任务管理", icon: "download" as const },
+  { href: "/material-tasks", label: "素材任务管理", icon: "list" as const },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("wm-theme");
+    const savedCollapsed = window.localStorage.getItem("wm-sidebar-collapsed");
+
+    if (savedTheme === "dark" || savedTheme === "light") {
+      setTheme(savedTheme);
+    }
+    if (savedCollapsed === "true") {
+      setCollapsed(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("wm-theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
+    window.localStorage.setItem("wm-sidebar-collapsed", String(collapsed));
+  }, [collapsed]);
 
   return (
-    <aside className="w-60 bg-black text-white flex flex-col h-screen">
-      <div className="h-20 flex items-center justify-center">
-        <h1 className="text-xl font-semibold tracking-tight">网文素材库</h1>
-      </div>
+    <aside
+      className={`hidden h-[100dvh] shrink-0 flex-col bg-black py-7 text-white transition-[width,padding] duration-200 lg:flex ${
+        collapsed ? "w-[88px] px-5" : "w-[248px] px-6"
+      }`}
+    >
+      <Link className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`} href="/">
+        <span className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] bg-white text-near-black">
+          <Icon name="bookOpen" size={18} />
+        </span>
+        {!collapsed && <span className="text-xl font-semibold tracking-normal">墨境书台</span>}
+      </Link>
 
-      <nav className="flex-1 px-4 py-4 space-y-1">
+      <nav className="mt-7 flex flex-col gap-2">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           return (
             <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              className={`flex h-11 items-center rounded-xl text-sm transition active:scale-[0.98] ${
+                collapsed ? "justify-center px-0" : "gap-2.5 px-3.5"
+              } ${
                 isActive
-                  ? 'bg-apple-blue text-white'
-                  : 'text-neutral-gray hover:text-white'
+                  ? "bg-graphite-a font-semibold text-white"
+                  : "font-medium text-pale-gray hover:bg-graphite-b"
               }`}
+              href={item.href}
+              key={item.href}
             >
-              <span className="text-base">{item.icon}</span>
-              <span className="text-sm font-medium">{item.label}</span>
+              <Icon
+                className={isActive ? "text-highlight-blue" : "text-[#a1a1a6]"}
+                name={item.icon}
+                size={17}
+              />
+              {!collapsed && <span>{item.label}</span>}
             </Link>
           );
         })}
       </nav>
+
+      <div className="flex-1" />
+
+      <div
+        className={`flex h-11 items-center gap-1 rounded-[22px] border border-dark-gray bg-graphite-a p-1 ${
+          collapsed ? "w-11 flex-col overflow-hidden" : "w-fit"
+        }`}
+      >
+        <button
+          aria-label={collapsed ? "展开侧边栏" : "收起侧边栏"}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-near-black text-[#a1a1a6] transition active:scale-[0.96]"
+          onClick={() => setCollapsed((value) => !value)}
+          type="button"
+        >
+          <Icon className={collapsed ? "rotate-180" : ""} name="panel" size={16} />
+        </button>
+        {!collapsed && (
+          <>
+            <button
+              aria-label="浅色主题"
+              className={`flex h-9 w-9 items-center justify-center rounded-full transition active:scale-[0.96] ${
+                theme === "light" ? "bg-white text-near-black" : "bg-near-black text-[#a1a1a6]"
+              }`}
+              onClick={() => setTheme("light")}
+              type="button"
+            >
+              <Icon name="sun" size={16} />
+            </button>
+            <button
+              aria-label="深色主题"
+              className={`flex h-9 w-9 items-center justify-center rounded-full transition active:scale-[0.96] ${
+                theme === "dark" ? "bg-white text-near-black" : "bg-near-black text-[#a1a1a6]"
+              }`}
+              onClick={() => setTheme("dark")}
+              type="button"
+            >
+              <Icon name="moon" size={16} />
+            </button>
+            <button
+              aria-label="设置"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-near-black text-[#a1a1a6] transition active:scale-[0.96]"
+              type="button"
+            >
+              <Icon name="settings" size={16} />
+            </button>
+          </>
+        )}
+      </div>
     </aside>
   );
 }

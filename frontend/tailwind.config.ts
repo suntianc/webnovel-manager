@@ -26,12 +26,13 @@ const config: Config = {
         "dark-gray": "#424245",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+        sans: ["var(--font-geist-sans)", "system-ui", "-apple-system", "sans-serif"],
+        display: ["var(--font-geist-sans)", "system-ui", "-apple-system", "sans-serif"],
         mono: ["Geist Mono", "ui-monospace", "SFMono-Regular", "monospace"],
       },
       letterSpacing: {
-        tight: "-0.02em",
-        tighter: "-0.04em",
+        tight: "0",
+        tighter: "0",
       },
       borderRadius: {
         sm: "5px",

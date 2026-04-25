@@ -2,9 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Geist";
+  src: url("./fonts/GeistVF.woff") format("woff");
+  font-weight: 100 900;
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  src: url("./fonts/GeistMonoVF.woff") format("woff");
+  font-weight: 100 900;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --font-geist-sans: "Geist";
+  --font-geist-mono: "Geist Mono";
 }
 
 @media (prefers-color-scheme: dark) {
@@ -17,11 +31,43 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+}
+
+html[data-theme="dark"] body {
+  --background: #000000;
+  --foreground: #f5f5f7;
+}
+
+html[data-theme="dark"] .bg-pale-gray {
+  background-color: #1d1d1f;
+}
+
+html[data-theme="dark"] .bg-white {
+  background-color: #272729;
+}
+
+html[data-theme="dark"] .text-near-black {
+  color: #f5f5f7;
+}
+
+html[data-theme="dark"] .border-soft-border {
+  border-color: #424245;
+}
+
+html[data-theme="dark"] .field-control {
+  background-color: #1d1d1f;
+  color: #f5f5f7;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+@layer components {
+  .field-control {
+    @apply h-[46px] w-full rounded-[14px] bg-pale-gray px-3.5 text-sm font-semibold text-near-black outline-none transition focus:ring-2 focus:ring-apple-blue/25;
   }
 }
