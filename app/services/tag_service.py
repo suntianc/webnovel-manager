@@ -20,24 +20,23 @@ class TagService:
         return list(dict.fromkeys(tags))
 
     def save_tags_for_material(self, material_id: int, tag_names: list[str]):
-        """为素材保存标签关联"""
+        """为素材保存标签关联（共用单个数据库连接）"""
         with get_db() as conn:
             conn.execute("DELETE FROM material_tags WHERE material_id = ?", (material_id,))
-
             for tag_name in tag_names:
-                tag_id = self.repo.find_or_create(tag_name)
+                tag_id = self.repo.find_or_create(tag_name, conn=conn)
                 conn.execute(
                     "INSERT INTO material_tags (material_id, tag_id) VALUES (?, ?)",
                     (material_id, tag_id),
                 )
             conn.commit()
 
-    def get_material_tags(self, material_id: int) -> list[dict]:
-        """获取素材的所有标签"""
+    def get_material_tags(self, material_id: int) -> list[str]:
+        """获取素材的所有标签名称"""
         with get_db() as conn:
             cursor = conn.execute(
                 """
-                SELECT t.id, t.name, t.tag_type
+                SELECT t.name
                 FROM tags t
                 INNER JOIN material_tags mt ON t.id = mt.tag_id
                 WHERE mt.material_id = ?
@@ -45,7 +44,7 @@ class TagService:
                 """,
                 (material_id,),
             )
-            return [dict(row) for row in cursor.fetchall()]
+            return [row['name'] for row in cursor.fetchall()]
 
     def get_all_tags(self) -> list[dict]:
         """获取所有标签"""

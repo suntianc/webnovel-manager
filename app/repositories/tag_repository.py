@@ -16,19 +16,23 @@ class TagRepository:
             row = cursor.fetchone()
             return dict(row) if row else None
 
-    def find_or_create(self, name: str) -> int:
-        """参考 models/tag.js:findOrCreate()"""
-        with get_db() as conn:
-            # Check if exists
+    def find_or_create(self, name: str, conn=None) -> int:
+        """查找或创建标签，可选传入已有连接"""
+        own_conn = conn is None
+        if own_conn:
+            conn = get_db().__enter__()
+        try:
             cursor = conn.execute('SELECT * FROM tags WHERE name = ?', (name,))
             existing = cursor.fetchone()
             if existing:
                 return existing['id']
-
-            # Create new
             cursor = conn.execute('INSERT INTO tags (name) VALUES (?)', (name,))
-            conn.commit()
+            if own_conn:
+                conn.commit()
             return cursor.lastrowid  # type: ignore[return-value]
+        finally:
+            if own_conn:
+                get_db().__exit__(None, None, None)
 
     def get_popular_tags(self, limit: int = 10) -> list[dict]:
         """参考 models/tag.js:getPopularTags()"""

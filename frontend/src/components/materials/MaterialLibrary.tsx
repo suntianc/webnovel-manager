@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Icon } from "@/components/ui/Icon";
 import {
+  useCategories,
   useCreateMaterial,
   useDeleteMaterial,
   useMaterials,
   useTags,
   useUpdateMaterial,
 } from "@/hooks/useApi";
-import type { Material, MaterialCreate, MaterialStatus, MaterialUpdate, Tag } from "@/types";
+import type { CategoriesResponse, Material, MaterialCreate, MaterialStatus, MaterialUpdate, Tag } from "@/types";
 
 const pageSize = 20;
 const statusOptions: MaterialStatus[] = ["待整理", "已整理", "采集中", "已使用", "已归档", "已废弃"];
@@ -61,6 +62,58 @@ function formatTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+const scoreRanges = [
+  { label: "不限", min: null, max: null },
+  { label: "0–1 分", min: 0, max: 1 },
+  { label: "2–3 分", min: 2, max: 3 },
+  { label: "4–5 分", min: 4, max: 5 },
+];
+
+function DropdownPopover({
+  children,
+  onClose,
+  width = "w-[200px]",
+}: {
+  children: React.ReactNode;
+  onClose: () => void;
+  width?: string;
+}) {
+  return (
+    <>
+      <div className="fixed inset-0 z-20" onMouseDown={onClose} />
+      <div
+        className={`absolute left-0 top-full z-20 mt-1 ${width} rounded-xl border border-soft-border bg-white p-1.5 shadow-[0_18px_42px_rgba(0,0,0,0.18)]`}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="flex flex-col gap-0.5">{children}</div>
+      </div>
+    </>
+  );
+}
+
+function DropdownOption({
+  active = false,
+  children,
+  onClick,
+}: {
+  active?: boolean;
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={`flex h-[38px] w-full items-center justify-between rounded-[10px] px-3 text-left text-[13px] font-semibold transition active:scale-[0.99] ${
+        active ? "bg-pale-gray text-apple-blue" : "text-near-black hover:bg-pale-gray"
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      {children}
+      {active && <Icon name="check" size={13} />}
+    </button>
+  );
 }
 
 function FilterChip({
@@ -233,27 +286,59 @@ function TagPickerPopover({
 function Toolbar({
   activeTag,
   availableTags,
+  category,
+  categories,
   isFetching,
+  maxScore,
+  minScore,
+  onCategoryChange,
   onClear,
   onCreate,
+  onScoreChange,
+  onStatusChange,
   onTagApply,
   onSearch,
   onViewModeChange,
   query,
+  statusFilter,
+  subcategory,
   viewMode,
 }: {
   activeTag: string | null;
   availableTags: Tag[];
+  category: string | null;
+  categories: CategoriesResponse | undefined;
   isFetching: boolean;
+  maxScore: number | null;
+  minScore: number | null;
+  onCategoryChange: (category: string | null, subcategory: string | null) => void;
   onClear: () => void;
   onCreate: () => void;
+  onScoreChange: (min: number | null, max: number | null) => void;
+  onStatusChange: (status: string | null) => void;
   onTagApply: (tag: string | null) => void;
   onSearch: (value: string) => void;
   onViewModeChange: (mode: ViewMode) => void;
   query: string;
+  statusFilter: string | null;
+  subcategory: string | null;
   viewMode: ViewMode;
 }) {
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [scoreOpen, setScoreOpen] = useState(false);
+
+  const categoryEntries = useMemo(
+    () => Object.entries(categories?.categories ?? {}),
+    [categories]
+  );
+
+  const activeCategoryLabel = category || "全部";
+  const activeStatusLabel = statusFilter || "全部";
+  const activeScoreLabel = scoreRanges.find(
+    (r) => r.min === minScore && r.max === maxScore
+  )?.label ?? "不限";
 
   return (
     <section className="rounded-xl border border-soft-border bg-white p-5">
@@ -281,15 +366,72 @@ function Toolbar({
         </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2.5">
-        <FilterChip>
-          分类：全部 <Icon className="text-neutral-gray" name="chevronDown" size={14} />
-        </FilterChip>
-        <FilterChip>
-          状态：全部 <Icon className="text-neutral-gray" name="chevronDown" size={14} />
-        </FilterChip>
-        <FilterChip>
-          价值评分：不限 <Icon className="text-neutral-gray" name="chevronDown" size={14} />
-        </FilterChip>
+        <div className="relative">
+          <FilterChip active={categoryOpen} onClick={() => setCategoryOpen((open) => !open)}>
+            分类：{activeCategoryLabel} <Icon className="text-neutral-gray" name="chevronDown" size={14} />
+          </FilterChip>
+          {categoryOpen && (
+            <DropdownPopover onClose={() => setCategoryOpen(false)}>
+              <DropdownOption
+                active={!category}
+                onClick={() => { onCategoryChange(null, null); setCategoryOpen(false); }}
+              >
+                全部
+              </DropdownOption>
+              {categoryEntries.map(([catName]) => (
+                <DropdownOption
+                  active={category === catName && !subcategory}
+                  key={catName}
+                  onClick={() => { onCategoryChange(catName, null); setCategoryOpen(false); }}
+                >
+                  {catName}
+                </DropdownOption>
+              ))}
+            </DropdownPopover>
+          )}
+        </div>
+        <div className="relative">
+          <FilterChip active={statusOpen} onClick={() => setStatusOpen((open) => !open)}>
+            状态：{activeStatusLabel} <Icon className="text-neutral-gray" name="chevronDown" size={14} />
+          </FilterChip>
+          {statusOpen && (
+            <DropdownPopover onClose={() => setStatusOpen(false)}>
+              <DropdownOption
+                active={!statusFilter}
+                onClick={() => { onStatusChange(null); setStatusOpen(false); }}
+              >
+                全部
+              </DropdownOption>
+              {statusOptions.map((status) => (
+                <DropdownOption
+                  active={statusFilter === status}
+                  key={status}
+                  onClick={() => { onStatusChange(status); setStatusOpen(false); }}
+                >
+                  {status}
+                </DropdownOption>
+              ))}
+            </DropdownPopover>
+          )}
+        </div>
+        <div className="relative">
+          <FilterChip active={scoreOpen} onClick={() => setScoreOpen((open) => !open)}>
+            价值评分：{activeScoreLabel} <Icon className="text-neutral-gray" name="chevronDown" size={14} />
+          </FilterChip>
+          {scoreOpen && (
+            <DropdownPopover onClose={() => setScoreOpen(false)} width="w-[180px]">
+              {scoreRanges.map((range) => (
+                <DropdownOption
+                  active={minScore === range.min && maxScore === range.max}
+                  key={range.label}
+                  onClick={() => { onScoreChange(range.min, range.max); setScoreOpen(false); }}
+                >
+                  {range.label}
+                </DropdownOption>
+              ))}
+            </DropdownPopover>
+          )}
+        </div>
         <div className="relative">
           <FilterChip active={tagPickerOpen} onClick={() => setTagPickerOpen((open) => !open)}>
             <Icon className={tagPickerOpen ? "text-white" : "text-apple-blue"} name="tag" size={14} />
@@ -490,8 +632,8 @@ function MaterialTable({
                 <span className="text-[13px] font-medium text-neutral-gray">{formatTime(row.updated_at)}</span>
                 <div className="flex gap-1.5 overflow-hidden">
                   {row.tags.length > 0 ? (
-                    row.tags.slice(0, 2).map((tag, index) => (
-                      <TagPill dark={index === 0 && selected} key={tag} label={tag} />
+                    row.tags.slice(0, 2).map((tag) => (
+                      <TagPill dark={false} key={tag} label={tag} />
                     ))
                   ) : (
                     <span className="text-xs font-medium text-neutral-gray">无标签</span>
@@ -677,8 +819,8 @@ function MaterialCards({
                   <div className="mt-3 flex items-center justify-between gap-3">
                     <div className="flex min-w-0 gap-1.5 overflow-hidden">
                       {row.tags.length > 0 ? (
-                        row.tags.slice(0, 2).map((tag, index) => (
-                          <TagPill dark={index === 0 && selected} key={tag} label={tag} />
+                        row.tags.slice(0, 2).map((tag) => (
+                          <TagPill dark={false} key={tag} label={tag} />
                         ))
                       ) : (
                         <span className="text-xs font-medium text-neutral-gray">{row.status}</span>
@@ -728,13 +870,25 @@ function EditModal({
   isSaving,
   onClose,
   onSave,
+  categories,
 }: {
   initialMaterial: Material | null;
   isSaving: boolean;
   onClose: () => void;
   onSave: (data: FormState) => void;
+  categories: CategoriesResponse | undefined;
 }) {
   const [form, setForm] = useState<FormState>(() => toFormState(initialMaterial));
+
+  const categoryOptions = useMemo(
+    () => Object.keys(categories?.categories ?? {}),
+    [categories]
+  );
+
+  const subcategoryOptions = useMemo(
+    () => categories?.categories[form.category] ?? [],
+    [categories, form.category]
+  );
 
   useEffect(() => {
     setForm(toFormState(initialMaterial));
@@ -796,30 +950,27 @@ function EditModal({
           <div className="grid gap-3.5 sm:grid-cols-2">
             <Field label="分类 / 子类">
               <div className="grid grid-cols-2 gap-2">
-                <input
-                  className="field-control"
-                  onChange={(event) => update("category", event.target.value)}
+                <FormSelect
+                  onChange={(val) => {
+                    update("category", val);
+                    update("subcategory", "");
+                  }}
+                  options={categoryOptions.map((c) => ({ label: c, value: c }))}
                   value={form.category}
                 />
-                <input
-                  className="field-control"
-                  onChange={(event) => update("subcategory", event.target.value)}
+                <FormSelect
+                  onChange={(val) => update("subcategory", val)}
+                  options={subcategoryOptions.map((s) => ({ label: s, value: s }))}
                   value={form.subcategory}
                 />
               </div>
             </Field>
             <Field label="整理状态">
-              <select
-                className="field-control"
-                onChange={(event) => update("status", event.target.value as MaterialStatus)}
+              <FormSelect
+                options={statusOptions.map((s) => ({ label: s, value: s }))}
+                onChange={(val) => update("status", val as MaterialStatus)}
                 value={form.status}
-              >
-                {statusOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
+              />
             </Field>
           </div>
           <Field label="摘要">
@@ -847,17 +998,14 @@ function EditModal({
               />
             </Field>
             <Field label="价值评分">
-              <select
-                className="field-control text-apple-blue"
-                onChange={(event) => update("value_score", Number(event.target.value))}
-                value={form.value_score}
-              >
-                {[0, 1, 2, 3, 4, 5].map((score) => (
-                  <option key={score} value={score}>
-                    {score} / 5
-                  </option>
-                ))}
-              </select>
+              <FormSelect
+                options={[0, 1, 2, 3, 4, 5].map((score) => ({
+                  label: `${score} / 5`,
+                  value: String(score),
+                }))}
+                onChange={(val) => update("value_score", Number(val))}
+                value={String(form.value_score)}
+              />
             </Field>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -879,6 +1027,63 @@ function EditModal({
   );
 }
 
+function FormSelect({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: { label: string; value: string }[];
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const currentLabel = options.find((o) => o.value === value)?.label ?? value;
+
+  return (
+    <div className="relative">
+      <button
+        className="field-control flex items-center justify-between"
+        onClick={() => setOpen((o) => !o)}
+        type="button"
+      >
+        <span className={open ? "text-apple-blue" : ""}>{currentLabel}</span>
+        <Icon
+          className={`transition ${open ? "text-apple-blue" : "text-neutral-gray"}`}
+          name="chevronDown"
+          size={15}
+        />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onMouseDown={() => setOpen(false)} />
+          <div className="absolute left-0 top-full z-30 mt-1 w-full rounded-xl border border-soft-border bg-white p-1.5 shadow-[0_18px_42px_rgba(0,0,0,0.18)]">
+            <div className="flex flex-col gap-0.5">
+              {options.map((opt) => (
+                <button
+                  className={`flex h-[38px] w-full items-center justify-between rounded-[10px] px-3 text-left text-[13px] font-semibold transition active:scale-[0.99] ${
+                    opt.value === value
+                      ? "bg-pale-gray text-apple-blue"
+                      : "text-near-black hover:bg-pale-gray"
+                  }`}
+                  key={opt.value}
+                  onClick={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
+                  type="button"
+                >
+                  {opt.label}
+                  {opt.value === value && <Icon name="check" size={13} />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
@@ -890,6 +1095,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 export function MaterialLibrary() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [category, setCategory] = useState<string | null>(null);
+  const [subcategory, setSubcategory] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [minScore, setMinScore] = useState<number | null>(null);
+  const [maxScore, setMaxScore] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingMaterial, setEditingMaterial] = useState<Material | null | undefined>(undefined);
   const [query, setQuery] = useState("");
@@ -898,11 +1108,17 @@ export function MaterialLibrary() {
 
   const materialsQuery = useMaterials({
     keyword: query || undefined,
+    category: category || undefined,
+    subcategory: subcategory || undefined,
+    status: statusFilter || undefined,
+    min_score: minScore ?? undefined,
+    max_score: maxScore ?? undefined,
     tag: activeTag || undefined,
     page: currentPage,
     limit: pageSize,
   });
   const tagsQuery = useTags();
+  const categoriesQuery = useCategories();
   const createMaterial = useCreateMaterial();
   const updateMaterial = useUpdateMaterial();
   const deleteMaterial = useDeleteMaterial();
@@ -986,16 +1202,30 @@ export function MaterialLibrary() {
         <Toolbar
           activeTag={activeTag}
           availableTags={availableTags}
+          category={category}
+          categories={categoriesQuery.data}
           isFetching={materialsQuery.isFetching}
+          maxScore={maxScore}
+          minScore={minScore}
+          onCategoryChange={(cat, sub) => { setCategory(cat); setSubcategory(sub); }}
           onClear={() => {
             setActiveTag(null);
+            setCategory(null);
+            setSubcategory(null);
+            setStatusFilter(null);
+            setMinScore(null);
+            setMaxScore(null);
             setQuery("");
           }}
           onCreate={() => setEditingMaterial(null)}
+          onScoreChange={(min, max) => { setMinScore(min); setMaxScore(max); }}
+          onStatusChange={setStatusFilter}
           onTagApply={setActiveTag}
           onSearch={setQuery}
           onViewModeChange={setViewMode}
           query={query}
+          statusFilter={statusFilter}
+          subcategory={subcategory}
           viewMode={viewMode}
         />
         {materialsQuery.isError && (
@@ -1069,6 +1299,7 @@ export function MaterialLibrary() {
       {editingMaterial !== undefined && (
         <EditModal
           initialMaterial={editingMaterial}
+          categories={categoriesQuery.data}
           isSaving={createMaterial.isPending || updateMaterial.isPending}
           onClose={() => setEditingMaterial(undefined)}
           onSave={saveMaterial}
