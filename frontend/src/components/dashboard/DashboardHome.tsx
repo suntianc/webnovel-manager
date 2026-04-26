@@ -1,14 +1,20 @@
+"use client";
+
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Icon } from "@/components/ui/Icon";
+import { useStats } from "@/hooks/useApi";
+import type { Stats } from "@/types";
 
-const kpis = [
-  { label: "小说数量", value: "6", hint: "连载与完本总数", icon: "book" as const },
-  { label: "素材数量", value: "100", hint: "设定、桥段、考据", icon: "archive" as const },
-  { label: "角色卡数量", value: "28", hint: "主角、配角与群像", icon: "users" as const },
-  { label: "近 7 天新增", value: "5", hint: "新增素材与章节", icon: "trending" as const },
-];
+const fallbackStats: Stats = {
+  total: 0,
+  total_tags: 0,
+  by_status: {},
+  by_category: {},
+  avg_score: 0,
+  recent_count: 0,
+};
 
-const categories = [
+const fallbackCategories: Array<[string, number]> = [
   ["世界观", 30],
   ["人物", 25],
   ["剧情", 20],
@@ -16,14 +22,7 @@ const categories = [
   ["文风", 5],
   ["金手指", 3],
   ["资料考据", 2],
-] as const;
-
-const writingStats = [
-  ["创作中的小说", "3 本", true],
-  ["已完本小说", "2 本", false],
-  ["昨日输出字数", "4,860", false],
-  ["今日输出字数", "2,120", false],
-] as const;
+];
 
 const tasks = [
   {
@@ -50,7 +49,16 @@ const tasks = [
   },
 ];
 
-function KpiCard({ item }: { item: (typeof kpis)[number] }) {
+function getKpis(stats: Stats) {
+  return [
+    { label: "素材数量", value: String(stats.total), hint: "全部素材条目", icon: "archive" as const },
+    { label: "标签数量", value: String(stats.total_tags), hint: "内容、状态与主题标签", icon: "tag" as const },
+    { label: "平均评分", value: stats.avg_score.toFixed(1), hint: "素材价值评分均值", icon: "star" as const },
+    { label: "近 7 天新增", value: String(stats.recent_count), hint: "新增素材条目", icon: "trending" as const },
+  ];
+}
+
+function KpiCard({ item }: { item: ReturnType<typeof getKpis>[number] }) {
   return (
     <section className="flex min-h-[132px] flex-col justify-between rounded-xl border border-soft-border bg-white p-5">
       <div className="flex items-center justify-between text-sm font-semibold text-neutral-gray">
@@ -63,7 +71,9 @@ function KpiCard({ item }: { item: (typeof kpis)[number] }) {
   );
 }
 
-function CategoryDistribution() {
+function CategoryDistribution({ categories }: { categories: Array<[string, number]> }) {
+  const maxValue = Math.max(1, ...categories.map(([, value]) => value));
+
   return (
     <section className="rounded-xl border border-soft-border bg-white p-6">
       <div className="mb-5 flex items-center justify-between">
@@ -86,7 +96,7 @@ function CategoryDistribution() {
             <div className="h-2 overflow-hidden rounded bg-pale-gray">
               <div
                 className={`h-full rounded ${label === "世界观" ? "bg-apple-blue" : "bg-[#8d8d93]"}`}
-                style={{ width: `${Math.max(4, value * 3)}%` }}
+                style={{ width: `${Math.max(4, (value / maxValue) * 100)}%` }}
               />
             </div>
             <span className="text-right text-[13px] font-semibold text-neutral-gray">{value}</span>
@@ -97,27 +107,32 @@ function CategoryDistribution() {
   );
 }
 
-function WritingInfo() {
+function StatusInfo({ statuses }: { statuses: Array<[string, number]> }) {
   return (
     <section className="rounded-xl border border-soft-border bg-white p-6">
       <div>
-        <h2 className="font-display text-2xl font-semibold">创作信息</h2>
-        <p className="mt-1 text-xs font-medium text-neutral-gray">小说项目与日更节奏</p>
+        <h2 className="font-display text-2xl font-semibold">整理信息</h2>
+        <p className="mt-1 text-xs font-medium text-neutral-gray">GET /api/stats.by_status</p>
       </div>
       <div className="mt-5 space-y-2.5">
-        {writingStats.map(([label, value, active]) => (
+        {statuses.map(([label, value], index) => (
           <div
             className={`flex h-11 items-center justify-between rounded-xl px-3.5 ${
-              active ? "bg-pale-gray" : "border border-soft-border bg-white"
+              index === 0 ? "bg-pale-gray" : "border border-soft-border bg-white"
             }`}
             key={label}
           >
             <span className="text-sm font-semibold">{label}</span>
-            <span className={`font-display text-[22px] font-semibold ${active ? "text-apple-blue" : ""}`}>
+            <span className={`font-display text-[22px] font-semibold ${index === 0 ? "text-apple-blue" : ""}`}>
               {value}
             </span>
           </div>
         ))}
+        {statuses.length === 0 && (
+          <div className="flex h-11 items-center rounded-xl bg-pale-gray px-3.5 text-sm font-semibold text-neutral-gray">
+            暂无状态统计
+          </div>
+        )}
       </div>
     </section>
   );
@@ -158,6 +173,17 @@ function TaskCard({ task }: { task: (typeof tasks)[number] }) {
 }
 
 export function DashboardHome() {
+  const { data, isError, isLoading } = useStats();
+  const stats = data ?? fallbackStats;
+  const kpis = getKpis(stats);
+  const categories =
+    Object.entries(stats.by_category).length > 0
+      ? Object.entries(stats.by_category).sort((a, b) => b[1] - a[1]).slice(0, 7)
+      : [...fallbackCategories];
+  const statuses = Object.entries(stats.by_status)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+
   return (
     <DashboardLayout>
       <div className="mx-auto flex min-h-[100dvh] max-w-[1192px] flex-col gap-6 px-4 py-6 sm:px-8">
@@ -169,6 +195,18 @@ export function DashboardHome() {
           <p className="mt-3 max-w-[920px] text-[17px] leading-[1.48] text-[#a1a1a6]">
             墨境书台为长篇小说创作而生：收拢设定、人物、桥段与灵光片段，在安静的秩序里，把零散星火养成一部长夜可读的故事。
           </p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {isLoading && (
+              <span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-[#a1a1a6]">
+                正在同步统计数据
+              </span>
+            )}
+            {isError && (
+              <span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-[#a1a1a6]">
+                统计接口暂不可用，已显示本地占位
+              </span>
+            )}
+          </div>
         </section>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -178,8 +216,8 @@ export function DashboardHome() {
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[1fr_372px]">
-          <CategoryDistribution />
-          <WritingInfo />
+          <CategoryDistribution categories={categories} />
+          <StatusInfo statuses={statuses} />
         </div>
 
         <div className="grid gap-4 xl:grid-cols-3">

@@ -49,7 +49,7 @@ export interface MaterialUpdate {
   tags?: string[];
 }
 
-export type MaterialListResponse = Material[];
+export type MaterialListResponse = PaginatedResponse<Material>;
 
 // Tag types
 export interface Tag {
@@ -101,14 +101,29 @@ export interface Stats {
   recent_count: number;
 }
 
-// API Response types
-export interface ApiError {
-  detail: string;
-}
-
-export interface PaginatedMaterials {
-  data: Material[];
+// Paginated response
+export interface PaginatedResponse<T> {
+  data: T[];
   total: number;
   page: number;
   limit: number;
+}
+
+export interface MaterialListParams {
+  category?: string;
+  subcategory?: string;
+  status?: string;
+  min_score?: number;
+  max_score?: number;
+  tag?: string;
+  keyword?: string;
+  sort?: string;
+  order?: string;
+  page?: number;
+  limit?: number;
+}
+
+// API Response types
+export interface ApiError {
+  detail: string;
 }

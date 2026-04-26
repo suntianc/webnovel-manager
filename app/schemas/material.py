@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
+import math
 
 class MaterialBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
@@ -32,6 +33,19 @@ class MaterialResponse(MaterialBase):
     tags: list[str] = Field(default_factory=list)
     created_at: str
     updated_at: str
+
+    class Config:
+        from_attributes = True
+
+class MaterialPaginatedResponse(BaseModel):
+    data: list[MaterialResponse]
+    total: int
+    page: int
+    limit: int
+
+    @property
+    def total_pages(self) -> int:
+        return max(1, math.ceil(self.total / self.limit))
 
     class Config:
         from_attributes = True

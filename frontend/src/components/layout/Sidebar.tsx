@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
+import { applyTheme, getStoredTheme, type ThemeMode } from "@/lib/theme";
 
 const navItems = [
   { href: "/", label: "首页看板", icon: "layout" as const },
@@ -16,23 +17,18 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<ThemeMode>(getStoredTheme);
 
   useEffect(() => {
-    const savedTheme = window.localStorage.getItem("wm-theme");
     const savedCollapsed = window.localStorage.getItem("wm-sidebar-collapsed");
 
-    if (savedTheme === "dark" || savedTheme === "light") {
-      setTheme(savedTheme);
-    }
     if (savedCollapsed === "true") {
       setCollapsed(true);
     }
   }, []);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem("wm-theme", theme);
+    applyTheme(theme);
   }, [theme]);
 
   useEffect(() => {

@@ -1,15 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { materialsApi, tagsApi, searchApi, categoriesApi, statsApi } from '@/lib/api';
-import type { MaterialCreate, MaterialUpdate, TagCreate, SearchParams } from '@/types';
+import type { MaterialCreate, MaterialUpdate, MaterialListParams, TagCreate, SearchParams } from '@/types';
 
-export function useMaterials(params?: {
-  category?: string;
-  subcategory?: string;
-  status?: string;
-  keyword?: string;
-  page?: number;
-  limit?: number;
-}) {
+export function useMaterials(params?: MaterialListParams) {
   return useQuery({
     queryKey: ['materials', params],
     queryFn: () => materialsApi.list(params),

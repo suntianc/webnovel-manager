@@ -33,19 +33,17 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 // Materials API
 export const materialsApi = {
-  list: async (params?: {
-    category?: string;
-    subcategory?: string;
-    status?: string;
-    keyword?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<MaterialListResponse> => {
+  list: async (params?: import('@/types').MaterialListParams): Promise<MaterialListResponse> => {
     const searchParams = new URLSearchParams();
     if (params?.category) searchParams.set('category', params.category);
     if (params?.subcategory) searchParams.set('subcategory', params.subcategory);
     if (params?.status) searchParams.set('status', params.status);
+    if (params?.min_score !== undefined) searchParams.set('min_score', String(params.min_score));
+    if (params?.max_score !== undefined) searchParams.set('max_score', String(params.max_score));
+    if (params?.tag) searchParams.set('tag', params.tag);
     if (params?.keyword) searchParams.set('keyword', params.keyword);
+    if (params?.sort) searchParams.set('sort', params.sort);
+    if (params?.order) searchParams.set('order', params.order);
     if (params?.page) searchParams.set('page', String(params.page));
     if (params?.limit) searchParams.set('limit', String(params.limit));
 
