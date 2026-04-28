@@ -5,6 +5,8 @@ description = "网文素材管理系统 API"
 requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.115.0",
+    "langgraph>=0.2.60",
+    "python-multipart>=0.0.20",
     "uvicorn[standard]>=0.30.0",
     "pydantic>=2.0.0",
 ]

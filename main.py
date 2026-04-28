@@ -1,12 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers.api import materials, tags, search, categories, stats
+from app.core.agent_database import ensure_agent_tables
+from app.routers.api import agents, artifacts, materials, novels, tags, search, categories, stats, workflows
 
 app = FastAPI(
     title="网文素材管理系统 API",
     description="提供素材管理、全文搜索、标签管理等功能",
     version="1.0.0"
 )
+
+
+@app.on_event("startup")
+def startup():
+    ensure_agent_tables()
 
 # CORS 配置
 app.add_middleware(
@@ -24,6 +30,10 @@ app.include_router(tags.router)
 app.include_router(search.router)
 app.include_router(categories.router)
 app.include_router(stats.router)
+app.include_router(agents.router)
+app.include_router(workflows.router)
+app.include_router(artifacts.router)
+app.include_router(novels.router)
 
 @app.get("/")
 def root():

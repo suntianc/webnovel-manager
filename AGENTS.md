@@ -1,7 +1,7 @@
 # WEBNOVEL-MANAGER
 
-**Generated:** 2026-04-25
-**Commit:** 14337e1
+**Generated:** 2026-04-29
+**Commit:** 51577b2
 **Stack:** Python 3.10+ / FastAPI + Next.js 14 / SQLite + FTS5 / Pydantic V2
 
 ## OVERVIEW
@@ -16,18 +16,17 @@ REST API backend + Next.js frontend for webnovel material management. CRUD, FTS5
 ├── pyproject.toml             # uv + dependencies
 ├── app/
 │   ├── core/                  # Database connection
-│   ├── schemas/               # Pydantic models
-│   ├── repositories/          # Data access layer
-│   ├── services/              # Business logic
+│   ├── schemas/               # Pydantic V2 models (pure data, no logic)
+│   ├── repositories/          # Data access layer (SQL, no business logic)
+│   ├── services/              # Business logic orchestration
 │   └── routers/api/           # API endpoints
 ├── frontend/                  # Next.js 14 project
-│   ├── src/
-│   │   ├── app/               # Pages
-│   │   ├── components/        # React components
-│   │   ├── hooks/             # React Query hooks
-│   │   ├── lib/               # API client
-│   │   └── types/             # TypeScript types
-│   └── tailwind.config.ts     # Apple design tokens
+│   └── src/
+│       ├── app/               # Pages (App Router)
+│       ├── components/        # React components
+│       ├── hooks/             # React Query hooks
+│       ├── lib/               # API client, theme
+│       └── types/             # TypeScript types
 ├── data/                      # SQLite DB (gitignored)
 ├── docs/                      # API documentation
 └── DESIGN.md                  # Design system reference
@@ -40,7 +39,7 @@ REST API backend + Next.js frontend for webnovel material management. CRUD, FTS5
 | New API endpoint | `app/routers/api/` | Create router file |
 | Business logic | `app/services/` | Service orchestrates repos |
 | Database queries | `app/repositories/` | Raw SQL via `get_db()` |
-| Request/Response model | `app/schemas/` | Pydantic models |
+| Request/Response model | `app/schemas/` | Pydantic V2 models |
 | DB connection | `app/core/database.py` | SQLite context manager |
 | Frontend UI | `frontend/src/app/` | Next.js pages |
 | API hooks | `frontend/src/hooks/` | React Query hooks |
@@ -61,34 +60,37 @@ Router → Service → Repository → Database
 **Backend:**
 ```bash
 uv sync                      # Install deps
-uvicorn main:app --reload    # Dev server
+uvicorn main:app --reload    # Dev server (port 3000)
 ```
 
 **Frontend:**
 ```bash
 cd frontend && npm run dev    # Dev server (port 3001)
-npm run build                 # Production build
+npm run build                # Production build
 ```
 
 ## CONVENTIONS
 
-- Router prefix: `/api/{resource}`
+- Router prefix: `/api/{resource}` (materials is `/api/materials/`)
 - Service instantiation: module level (not DI)
 - Return format: direct JSON (no wrapper)
 - Frontend: React Query + Tailwind + Apple design tokens
-- TypeScript strict mode with `@/*` path alias
+- TypeScript strict mode with `@/*` path alias → `./src/*`
+- Pydantic V2: use `Field()` for validation, `from_attributes = True` for ORM
 
-## ANTI-PATTERNS
+## ANTI-PATTERNS (THIS PROJECT)
 
 - Repository NEVER calls Service
 - Schema is pure data, no business logic
 - Frontend: no `as any`, no `@ts-ignore`
 - Backend: no empty catch blocks
+- Missing `__init__.py` in `services/` and `repositories/`
 
 ## NOTES
 
 - Database: `data/materials.db` (gitignored)
-- FTS5 virtual table: `materials_fts`
+- FTS5 virtual table: `materials_fts` (BM25 ranking for search)
 - CORS: `allow_origins=["*"]`
 - No test infrastructure (pytest dep exists but no tests/)
-- Missing `__init__.py` in `services/` and `repositories/`
+- No CI/CD (no GitHub Actions, no Docker)
+- `/workspace`, `/collect-tasks`, `/material-tasks` are placeholder pages

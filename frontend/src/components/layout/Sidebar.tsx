@@ -10,6 +10,7 @@ const navItems = [
   { href: "/", label: "首页看板", icon: "layout" as const },
   { href: "/workspace", label: "创作台", icon: "pen" as const },
   { href: "/materials", label: "素材库", icon: "book" as const },
+  { href: "/novels", label: "网文处理", icon: "bookOpen" as const },
   { href: "/collect-tasks", label: "采集任务管理", icon: "download" as const },
   { href: "/material-tasks", label: "素材任务管理", icon: "list" as const },
 ];

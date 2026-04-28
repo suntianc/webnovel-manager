@@ -9,9 +9,19 @@ import type {
   SearchParams,
   CategoriesResponse,
   Stats,
+  NovelListParams,
+  NovelListResponse,
+  NovelSource,
+  NovelChapter,
+  NovelPart,
+  WorkflowListResponse,
+  WorkflowRun,
+  WorkflowTask,
+  WorkflowEvent,
+  ArtifactListResponse,
 } from '@/types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 class ApiError extends Error {
   constructor(public detail: string) {
@@ -135,6 +145,117 @@ export const statsApi = {
   get: async (): Promise<Stats> => {
     const response = await fetch(`${API_BASE}/api/stats/`);
     return handleResponse<Stats>(response);
+  },
+};
+
+export const novelsApi = {
+  list: async (params?: NovelListParams): Promise<NovelListResponse> => {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.set('status', params.status);
+    if (params?.keyword) searchParams.set('keyword', params.keyword);
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    const response = await fetch(`${API_BASE}/api/novels/?${searchParams}`);
+    return handleResponse<NovelListResponse>(response);
+  },
+
+  get: async (id: number): Promise<NovelSource> => {
+    const response = await fetch(`${API_BASE}/api/novels/${id}`);
+    return handleResponse<NovelSource>(response);
+  },
+
+  upload: async (file: File): Promise<NovelSource> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(`${API_BASE}/api/novels/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+    return handleResponse<NovelSource>(response);
+  },
+
+  parse: async (id: number): Promise<NovelSource> => {
+    const response = await fetch(`${API_BASE}/api/novels/${id}/parse`, { method: 'POST' });
+    return handleResponse<NovelSource>(response);
+  },
+
+  delete: async (id: number): Promise<void> => {
+    const response = await fetch(`${API_BASE}/api/novels/${id}`, { method: 'DELETE' });
+    return handleResponse<void>(response);
+  },
+
+  chapters: async (id: number, includeContent = false): Promise<NovelChapter[]> => {
+    const response = await fetch(`${API_BASE}/api/novels/${id}/chapters?include_content=${includeContent}`);
+    return handleResponse<NovelChapter[]>(response);
+  },
+
+  parts: async (id: number, includeContent = false): Promise<NovelPart[]> => {
+    const response = await fetch(`${API_BASE}/api/novels/${id}/parts?include_content=${includeContent}`);
+    return handleResponse<NovelPart[]>(response);
+  },
+
+  generateParts: async ({ id, chaptersPerPart }: { id: number; chaptersPerPart: number }): Promise<NovelPart[]> => {
+    const response = await fetch(`${API_BASE}/api/novels/${id}/parts/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chapters_per_part: chaptersPerPart, overwrite: true }),
+    });
+    return handleResponse<NovelPart[]>(response);
+  },
+
+  startAnalysis: async (id: number): Promise<{ workflow: WorkflowRun }> => {
+    const response = await fetch(`${API_BASE}/api/novels/${id}/analysis/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    return handleResponse<{ workflow: WorkflowRun }>(response);
+  },
+};
+
+export const workflowsApi = {
+  list: async (params?: { status?: string; workflow_type?: string; biz_type?: string; page?: number; limit?: number }): Promise<WorkflowListResponse> => {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.set('status', params.status);
+    if (params?.workflow_type) searchParams.set('workflow_type', params.workflow_type);
+    if (params?.biz_type) searchParams.set('biz_type', params.biz_type);
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    const response = await fetch(`${API_BASE}/api/workflows/?${searchParams}`);
+    return handleResponse<WorkflowListResponse>(response);
+  },
+
+  get: async (id: number): Promise<WorkflowRun> => {
+    const response = await fetch(`${API_BASE}/api/workflows/${id}`);
+    return handleResponse<WorkflowRun>(response);
+  },
+
+  tasks: async (id: number): Promise<WorkflowTask[]> => {
+    const response = await fetch(`${API_BASE}/api/workflows/${id}/tasks`);
+    return handleResponse<WorkflowTask[]>(response);
+  },
+
+  events: async (id: number, afterId = 0): Promise<WorkflowEvent[]> => {
+    const response = await fetch(`${API_BASE}/api/workflows/${id}/events?after_id=${afterId}`);
+    return handleResponse<WorkflowEvent[]>(response);
+  },
+
+  resume: async (id: number): Promise<WorkflowRun> => {
+    const response = await fetch(`${API_BASE}/api/workflows/${id}/resume`, { method: 'POST' });
+    return handleResponse<WorkflowRun>(response);
+  },
+};
+
+export const artifactsApi = {
+  list: async (params?: { run_id?: number; artifact_type?: string; status?: string; page?: number; limit?: number }): Promise<ArtifactListResponse> => {
+    const searchParams = new URLSearchParams();
+    if (params?.run_id) searchParams.set('run_id', String(params.run_id));
+    if (params?.artifact_type) searchParams.set('artifact_type', params.artifact_type);
+    if (params?.status) searchParams.set('status', params.status);
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    const response = await fetch(`${API_BASE}/api/artifacts/?${searchParams}`);
+    return handleResponse<ArtifactListResponse>(response);
   },
 };
 

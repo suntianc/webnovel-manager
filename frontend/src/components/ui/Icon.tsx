@@ -27,6 +27,7 @@ type IconName =
   | "tag"
   | "trash"
   | "trending"
+  | "upload"
   | "users";
 
 type IconProps = SVGProps<SVGSVGElement> & {
@@ -61,6 +62,7 @@ const paths: Record<IconName, string[]> = {
   tag: ["M20 13 13 20 4 11V4h7l9 9Z", "M7.5 7.5h.01"],
   trash: ["M4 7h16", "M10 11v6", "M14 11v6", "M6 7l1 14h10l1-14", "M9 7V4h6v3"],
   trending: ["M3 17 9 11l4 4 7-8", "M14 7h6v6"],
+  upload: ["M12 21V9", "m7 14-5-5-5 5", "M5 3h14"],
   users: ["M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2", "M9.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z", "M22 21v-2a4 4 0 0 0-3-3.9", "M16 3.1a4 4 0 0 1 0 7.8"],
 };
 

@@ -7,3 +7,8 @@ __pycache__/
 *.pyc
 .venv/
 .opencode/
+.claude/
+.sisyphus/
+.todo/
+webnovels/
+*.skill

@@ -123,6 +123,127 @@ export interface MaterialListParams {
   limit?: number;
 }
 
+export type NovelStatus = 'uploaded' | 'processing' | 'parsed' | 'failed';
+export type WorkflowStatus = 'pending' | 'running' | 'waiting_review' | 'completed' | 'failed' | 'canceled';
+
+export interface NovelSource {
+  id: number;
+  title: string;
+  author: string | null;
+  original_filename: string;
+  stored_path: string;
+  file_size: number;
+  file_hash: string;
+  cover_path: string | null;
+  status: NovelStatus;
+  chapter_count: number;
+  part_count: number;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NovelListParams {
+  status?: string;
+  keyword?: string;
+  page?: number;
+  limit?: number;
+}
+
+export type NovelListResponse = PaginatedResponse<NovelSource>;
+
+export interface NovelChapter {
+  id: number;
+  novel_id: number;
+  chapter_index: number;
+  title: string;
+  content?: string | null;
+  word_count: number;
+  start_offset: number;
+  end_offset: number;
+  created_at: string;
+}
+
+export interface NovelPart {
+  id: number;
+  novel_id: number;
+  part_index: number;
+  title: string;
+  chapter_start: number;
+  chapter_end: number;
+  content?: string | null;
+  word_count: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkflowRun {
+  id: number;
+  workflow_type: string;
+  biz_type: string;
+  biz_id: number | null;
+  title: string;
+  status: WorkflowStatus;
+  progress: number;
+  current_node: string | null;
+  input_payload: Record<string, unknown>;
+  error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type WorkflowListResponse = PaginatedResponse<WorkflowRun>;
+
+export interface WorkflowTask {
+  id: number;
+  run_id: number;
+  node_name: string;
+  agent_name: string | null;
+  task_type: string;
+  status: string;
+  progress: number;
+  input_ref: string | null;
+  output_ref: string | null;
+  retry_count: number;
+  error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkflowEvent {
+  id: number;
+  run_id: number;
+  task_id: number | null;
+  event_type: string;
+  level: string;
+  message: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface Artifact {
+  id: number;
+  run_id: number;
+  task_id: number | null;
+  artifact_type: string;
+  title: string;
+  content: string | null;
+  structured_data: Record<string, unknown>;
+  version: number;
+  status: string;
+  source_refs: Record<string, unknown>[];
+  created_by_agent: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ArtifactListResponse = PaginatedResponse<Artifact>;
+
 // API Response types
 export interface ApiError {
   detail: string;
