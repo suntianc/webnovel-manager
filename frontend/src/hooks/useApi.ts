@@ -203,6 +203,19 @@ export function useWorkflowEvents(id: number) {
   });
 }
 
+export function useRetryWorkflow() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => workflowsApi.retry(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow-events', id] });
+      queryClient.invalidateQueries({ queryKey: ['workflow-tasks', id] });
+      queryClient.invalidateQueries({ queryKey: ['artifacts'] });
+    },
+  });
+}
+
 export function useResumeWorkflow() {
   const queryClient = useQueryClient();
   return useMutation({

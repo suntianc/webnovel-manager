@@ -18,7 +18,11 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const [theme, setTheme] = useState<ThemeMode>(getStoredTheme);
+  const [theme, setTheme] = useState<ThemeMode>("light");
+
+  useEffect(() => {
+    setTheme(getStoredTheme());
+  }, []);
 
   useEffect(() => {
     const savedCollapsed = window.localStorage.getItem("wm-sidebar-collapsed");

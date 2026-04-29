@@ -12,6 +12,7 @@ import {
   useNovel,
   useNovelChapters,
   useNovelParts,
+  useRetryWorkflow,
   useStartNovelAnalysis,
   useWorkflowEvents,
   useWorkflows,
@@ -99,12 +100,14 @@ export function NovelDetail({ novelId }: { novelId: number }) {
   const queryClient = useQueryClient();
   const [analysisStarted, setAnalysisStarted] = useState(false);
   const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
+  const [selectedArtifactType, setSelectedArtifactType] = useState<string | null>(null);
   const novelQuery = useNovel(novelId);
   const partsQuery = useNovelParts(novelId);
   const chaptersQuery = useNovelChapters(novelId);
   const workflowsQuery = useWorkflows({ biz_type: "novel", limit: 100 });
   const generateParts = useGenerateNovelParts();
   const startAnalysis = useStartNovelAnalysis();
+  const retryWorkflow = useRetryWorkflow();
 
   const workflow = useMemo(
     () => latestWorkflowFor(novelId, workflowsQuery.data?.data ?? []),
@@ -151,10 +154,14 @@ export function NovelDetail({ novelId }: { novelId: number }) {
       return acc;
     }, {})
   ).sort(([left], [right]) => left.localeCompare(right));
+  const typeArtifacts = useMemo(
+    () => (selectedArtifactType ? artifacts.filter((a) => a.artifact_type === selectedArtifactType) : []),
+    [selectedArtifactType, artifacts]
+  );
   const progress = workflow?.progress ?? (novel?.status === "parsed" ? 100 : 0);
   const status = workflow?.status ?? novel?.status ?? "pending";
   const hasGeneratedParts = parts.length > 0;
-  const analysisLocked = startAnalysis.isPending || (!!workflow ? workflow.status !== "failed" : analysisStarted);
+  const analysisLocked = startAnalysis.isPending || (!!workflow ? workflow.status !== "failed" : analysisStarted) || retryWorkflow.isPending;
 
   if (novelQuery.isLoading) {
     return (
@@ -200,7 +207,26 @@ export function NovelDetail({ novelId }: { novelId: number }) {
             <div className="h-2 rounded bg-white">
               <div className="h-full rounded bg-apple-blue" style={{ width: `${progress}%` }} />
             </div>
-            <p className="text-xs font-bold text-apple-blue">{statusText[status] ?? status}</p>
+            <div className="flex items-center gap-2">
+              <p className={`text-xs font-bold ${status === "failed" ? "text-[#bf4800]" : "text-apple-blue"}`}>
+                {statusText[status] ?? status}
+              </p>
+              {status === "failed" && workflow?.error_message && (
+                <span className="ml-auto truncate text-[11px] font-semibold text-[#bf4800]" title={workflow.error_message}>
+                  {workflow.error_message}
+                </span>
+              )}
+              {status === "failed" && (
+                <button
+                  className="ml-auto h-7 shrink-0 rounded-full bg-apple-blue px-3 text-[11px] font-extrabold text-white transition hover:bg-highlight-blue active:scale-[0.97] disabled:opacity-50"
+                  disabled={retryWorkflow.isPending}
+                  onClick={() => workflow && retryWorkflow.mutate(workflow.id)}
+                  type="button"
+                >
+                  {retryWorkflow.isPending ? "重试中" : "重试"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -216,7 +242,7 @@ export function NovelDetail({ novelId }: { novelId: number }) {
               </div>
             </div>
 
-            <div className="mt-4 flex max-h-[548px] flex-col gap-3 overflow-y-auto pr-1">
+            <div className="mt-4 flex max-h-[750px] flex-col gap-3 overflow-y-auto pr-1">
               {parts.map((part, index) => (
                 <div
                   className={`rounded-[14px] p-3.5 ${index === 0 ? "bg-pale-gray" : "border border-soft-border bg-white"}`}
@@ -289,63 +315,33 @@ export function NovelDetail({ novelId }: { novelId: number }) {
               <h3 className="text-base font-extrabold">产物统计</h3>
               {artifactGroups.length > 0 ? (
                 <div className="mt-3 grid grid-cols-2 gap-3">
-                  {artifactGroups.map(([type, count], index) => (
-                    <div className="rounded-[14px] bg-graphite-a p-3.5" key={type}>
-                      <p className={`font-display text-3xl font-bold ${index === 0 ? "text-highlight-blue" : ""}`}>
-                        {count}
-                      </p>
+                  {artifactGroups.map(([type, count]) => (
+                    <button
+                      className="rounded-[14px] bg-graphite-a p-3.5 text-left transition hover:bg-graphite-b active:scale-[0.98]"
+                      key={type}
+                      onClick={() => setSelectedArtifactType(type)}
+                      type="button"
+                    >
+                      <p className="font-display text-3xl font-bold text-white">{count}</p>
                       <p className="mt-1 text-[11px] font-bold text-[#a1a1a6]">
                         {artifactText[type] ?? type}
                       </p>
-                    </div>
+                    </button>
                   ))}
                 </div>
               ) : (
-                <p className="mt-3 text-xs font-semibold leading-relaxed text-[#a1a1a6]">
-                  暂无产物。
-                </p>
+                <div className="mt-3 flex flex-col items-center gap-2 rounded-[14px] bg-graphite-a p-4">
+                  <p className="text-xs font-bold text-[#a1a1a6]">暂无产物</p>
+                  <p className="text-[11px] font-semibold text-[#6e6e73]">工作流完成后将在此处展示分析结果</p>
+                </div>
               )}
-            </div>
-
-            <div className="mt-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-extrabold">产物列表</h3>
-                <span className="text-xs font-bold text-neutral-gray">{artifacts.length} 个</span>
-              </div>
-              <div className="mt-3 flex max-h-[260px] flex-col gap-2 overflow-y-auto pr-1">
-                {artifacts.map((artifact) => (
-                  <button
-                    className="rounded-[14px] border border-soft-border bg-white p-3 text-left transition hover:bg-pale-gray active:scale-[0.99]"
-                    key={artifact.id}
-                    onClick={() => setSelectedArtifact(artifact)}
-                    type="button"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e8f3ff] text-apple-blue">
-                        <Icon name="archive" size={16} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-extrabold text-near-black">{artifact.title}</p>
-                        <p className="mt-1 text-xs font-semibold text-neutral-gray">
-                          {artifactText[artifact.artifact_type] ?? artifact.artifact_type} · {artifact.created_by_agent ?? "系统节点"} · v{artifact.version}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-                {artifacts.length === 0 && (
-                  <div className="rounded-[14px] bg-pale-gray p-4 text-sm font-semibold text-neutral-gray">
-                    暂无产物。
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
       </section>
 
       {selectedArtifact && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 pl-0 lg:pl-[88px]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center pl-0 lg:pl-[88px]">
           <div className="max-h-[82vh] w-[720px] max-w-[calc(100vw-48px)] overflow-hidden rounded-[24px] border border-soft-border bg-white shadow-[0_24px_60px_rgba(0,0,0,0.25)]">
             <div className="flex items-start justify-between gap-4 border-b border-soft-border p-5">
               <div className="min-w-0">
@@ -373,6 +369,57 @@ export function NovelDetail({ novelId }: { novelId: number }) {
                 <pre className="mt-3 whitespace-pre-wrap rounded-[16px] bg-white p-4 text-xs font-semibold leading-relaxed text-neutral-gray ring-1 ring-soft-border">
                   {JSON.stringify(selectedArtifact.structured_data, null, 2)}
                 </pre>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedArtifactType && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 pl-0 lg:pl-[88px]">
+          <div className="max-h-[82vh] w-[550px] max-w-[calc(100vw-48px)] overflow-hidden rounded-[24px] border border-soft-border bg-white shadow-[0_24px_60px_rgba(0,0,0,0.25)]">
+            <div className="flex items-center justify-between border-b border-soft-border p-5">
+              <div className="min-w-0">
+                <p className="text-xs font-extrabold text-apple-blue">
+                  {artifactText[selectedArtifactType] ?? selectedArtifactType}
+                </p>
+                <h3 className="font-display text-2xl font-bold">产物列表</h3>
+              </div>
+              <button
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-pale-gray text-neutral-gray"
+                onClick={() => setSelectedArtifactType(null)}
+                type="button"
+              >
+                <Icon name="close" size={16} />
+              </button>
+            </div>
+            <div className="max-h-[calc(82vh-80px)] overflow-y-auto p-4">
+              {typeArtifacts.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {typeArtifacts.map((artifact) => (
+                    <button
+                      className="flex items-start gap-3 rounded-[14px] border border-soft-border bg-white p-3.5 text-left transition hover:bg-pale-gray active:scale-[0.99]"
+                      key={artifact.id}
+                      onClick={() => setSelectedArtifact(artifact)}
+                      type="button"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e8f3ff] text-apple-blue">
+                        <Icon name="archive" size={16} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-extrabold text-near-black">{artifact.title}</p>
+                        <p className="mt-1 text-xs font-semibold text-neutral-gray">
+                          {artifact.created_by_agent ?? "系统节点"} · v{artifact.version} · {statusText[artifact.status] ?? artifact.status}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 rounded-[14px] bg-pale-gray p-8">
+                  <p className="text-sm font-bold text-neutral-gray">暂无该类型产物</p>
+                  <p className="text-xs font-semibold text-neutral-gray">当前没有{artifactText[selectedArtifactType] ?? selectedArtifactType}类型的产物</p>
+                </div>
               )}
             </div>
           </div>

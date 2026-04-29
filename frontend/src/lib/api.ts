@@ -244,6 +244,11 @@ export const workflowsApi = {
     const response = await fetch(`${API_BASE}/api/workflows/${id}/resume`, { method: 'POST' });
     return handleResponse<WorkflowRun>(response);
   },
+
+  retry: async (id: number): Promise<WorkflowRun> => {
+    const response = await fetch(`${API_BASE}/api/workflows/${id}/retry`, { method: 'POST' });
+    return handleResponse<WorkflowRun>(response);
+  },
 };
 
 export const artifactsApi = {
