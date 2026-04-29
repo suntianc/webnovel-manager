@@ -1,5 +1,6 @@
 import { NovelDetail } from "@/components/novels/NovelDetail";
 
-export default function NovelDetailPage({ params }: { params: { id: string } }) {
-  return <NovelDetail novelId={Number(params.id)} />;
+export default async function NovelDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <NovelDetail novelId={Number(id)} />;
 }

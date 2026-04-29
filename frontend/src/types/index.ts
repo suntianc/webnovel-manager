@@ -248,3 +248,48 @@ export type ArtifactListResponse = PaginatedResponse<Artifact>;
 export interface ApiError {
   detail: string;
 }
+
+// AI Provider types
+export type ProviderStatus = 'untested' | 'connected' | 'failed';
+
+export interface AIProvider {
+  id: number;
+  name: string;
+  provider_type: string;
+  base_url: string;
+  has_api_key: boolean;
+  api_key_masked: string;
+  models: string[];
+  status: ProviderStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AIProviderCreate {
+  name: string;
+  base_url: string;
+  api_key: string;
+  models?: string[];
+}
+
+export interface AIProviderUpdate {
+  name?: string;
+  base_url?: string;
+  api_key?: string;
+  models?: string[];
+}
+
+export const KNOWN_PROVIDERS: { name: string; base_url: string }[] = [
+  { name: 'OpenAI', base_url: 'https://api.openai.com/v1' },
+  { name: 'Anthropic', base_url: 'https://api.anthropic.com/v1' },
+  { name: 'SiliconFlow', base_url: 'https://api.siliconflow.cn/v1' },
+  { name: 'DeepSeek', base_url: 'https://api.deepseek.com/v1' },
+  { name: 'Moonshot', base_url: 'https://api.moonshot.cn/v1' },
+  { name: 'ZhipuAI', base_url: 'https://open.bigmodel.cn/api/paas/v4' },
+  { name: 'Qwen', base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
+  { name: 'Groq', base_url: 'https://api.groq.com/openai/v1' },
+  { name: 'Mistral', base_url: 'https://api.mistral.ai/v1' },
+  { name: 'Together AI', base_url: 'https://api.together.xyz/v1' },
+  { name: 'OpenRouter', base_url: 'https://openrouter.ai/api/v1' },
+  { name: 'xAI', base_url: 'https://api.x.ai/v1' },
+];

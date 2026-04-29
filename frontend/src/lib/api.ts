@@ -19,6 +19,9 @@ import type {
   WorkflowTask,
   WorkflowEvent,
   ArtifactListResponse,
+  AIProvider,
+  AIProviderCreate,
+  AIProviderUpdate,
 } from '@/types';
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -261,6 +264,76 @@ export const artifactsApi = {
     if (params?.limit) searchParams.set('limit', String(params.limit));
     const response = await fetch(`${API_BASE}/api/artifacts/?${searchParams}`);
     return handleResponse<ArtifactListResponse>(response);
+  },
+};
+
+
+export const providersApi = {
+  list: async (): Promise<AIProvider[]> => {
+    const response = await fetch(`${API_BASE}/api/ai-providers/`);
+    return handleResponse<AIProvider[]>(response);
+  },
+
+  get: async (id: number): Promise<AIProvider> => {
+    const response = await fetch(`${API_BASE}/api/ai-providers/${id}`);
+    return handleResponse<AIProvider>(response);
+  },
+
+  create: async (data: AIProviderCreate): Promise<AIProvider> => {
+    const response = await fetch(`${API_BASE}/api/ai-providers/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<AIProvider>(response);
+  },
+
+  update: async (id: number, data: AIProviderUpdate): Promise<AIProvider> => {
+    const response = await fetch(`${API_BASE}/api/ai-providers/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<AIProvider>(response);
+  },
+
+  delete: async (id: number): Promise<void> => {
+    const response = await fetch(`${API_BASE}/api/ai-providers/${id}`, {
+      method: 'DELETE',
+    });
+    return handleResponse<void>(response);
+  },
+
+  testConnection: async (id: number): Promise<{ status: string; message: string }> => {
+    const response = await fetch(`${API_BASE}/api/ai-providers/${id}/test`, {
+      method: 'POST',
+    });
+    return handleResponse(response);
+  },
+
+  testConfig: async (data: AIProviderCreate): Promise<{ status: string; message: string }> => {
+    const response = await fetch(`${API_BASE}/api/ai-providers/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response);
+  },
+
+  fetchModels: async (id: number): Promise<{ models: string[] }> => {
+    const response = await fetch(`${API_BASE}/api/ai-providers/${id}/models/fetch`, {
+      method: 'POST',
+    });
+    return handleResponse(response);
+  },
+
+  fetchModelsForConfig: async (data: AIProviderCreate): Promise<{ models: string[] }> => {
+    const response = await fetch(`${API_BASE}/api/ai-providers/models/fetch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response);
   },
 };
 

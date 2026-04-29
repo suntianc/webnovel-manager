@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { artifactsApi, materialsApi, novelsApi, tagsApi, searchApi, categoriesApi, statsApi, workflowsApi } from '@/lib/api';
-import type { MaterialCreate, MaterialUpdate, MaterialListParams, NovelListParams, TagCreate, SearchParams } from '@/types';
+import { artifactsApi, materialsApi, novelsApi, providersApi, tagsApi, searchApi, categoriesApi, statsApi, workflowsApi } from '@/lib/api';
+import type { AIProviderCreate, AIProviderUpdate, MaterialCreate, MaterialUpdate, MaterialListParams, NovelListParams, TagCreate, SearchParams } from '@/types';
 
 export function useMaterials(params?: MaterialListParams) {
   return useQuery({
@@ -234,5 +234,76 @@ export function useArtifacts(params?: { run_id?: number; artifact_type?: string;
     queryKey: ['artifacts', params],
     queryFn: () => artifactsApi.list(params),
     enabled: !!params?.run_id,
+  });
+}
+
+export function useProviders() {
+  return useQuery({
+    queryKey: ['providers'],
+    queryFn: () => providersApi.list(),
+    refetchInterval: 5000,
+  });
+}
+
+export function useCreateProvider() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: AIProviderCreate) => providersApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['providers'] });
+    },
+  });
+}
+
+export function useUpdateProvider() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: AIProviderUpdate }) =>
+      providersApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['providers'] });
+    },
+  });
+}
+
+export function useDeleteProvider() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => providersApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['providers'] });
+    },
+  });
+}
+
+export function useTestConnection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => providersApi.testConnection(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['providers'] });
+    },
+  });
+}
+
+export function useTestProviderConfig() {
+  return useMutation({
+    mutationFn: (data: AIProviderCreate) => providersApi.testConfig(data),
+  });
+}
+
+export function useFetchModels() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => providersApi.fetchModels(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['providers'] });
+    },
+  });
+}
+
+export function useFetchModelsForConfig() {
+  return useMutation({
+    mutationFn: (data: AIProviderCreate) => providersApi.fetchModelsForConfig(data),
   });
 }
