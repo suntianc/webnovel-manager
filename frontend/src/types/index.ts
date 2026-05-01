@@ -244,6 +244,36 @@ export interface Artifact {
 
 export type ArtifactListResponse = PaginatedResponse<Artifact>;
 
+export interface AgentDefinition {
+  id: number;
+  name: string;
+  role: string;
+  description: string | null;
+  system_prompt: string;
+  provider_id: number | null;
+  model: string;
+  temperature: number;
+  max_tokens: number;
+  tools: string[];
+  output_schema: Record<string, unknown> | null;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentDefinitionUpdate {
+  role?: string;
+  description?: string | null;
+  system_prompt?: string;
+  provider_id?: number | null;
+  model?: string;
+  temperature?: number;
+  max_tokens?: number;
+  tools?: string[];
+  output_schema?: Record<string, unknown> | null;
+  enabled?: boolean;
+}
+
 // API Response types
 export interface ApiError {
   detail: string;
@@ -284,6 +314,8 @@ export const KNOWN_PROVIDERS: { name: string; base_url: string }[] = [
   { name: 'Anthropic', base_url: 'https://api.anthropic.com/v1' },
   { name: 'SiliconFlow', base_url: 'https://api.siliconflow.cn/v1' },
   { name: 'DeepSeek', base_url: 'https://api.deepseek.com/v1' },
+  { name: 'MiniMax 国内', base_url: 'https://api.minimaxi.com/v1' },
+  { name: 'MiniMax 海外', base_url: 'https://api.minimax.io/v1' },
   { name: 'Moonshot', base_url: 'https://api.moonshot.cn/v1' },
   { name: 'ZhipuAI', base_url: 'https://open.bigmodel.cn/api/paas/v4' },
   { name: 'Qwen', base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },

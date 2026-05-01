@@ -11,6 +11,9 @@ from app.repositories.ai_provider_repository import AIProviderRepository
 class AIProviderService:
     DEFAULT_TEST_MODELS = {
         "DeepSeek": "deepseek-chat",
+        "MiniMax 国内": "MiniMax-M2.7",
+        "MiniMax 海外": "MiniMax-M2.7",
+        "MiniMax": "MiniMax-M2.7",
         "Moonshot": "moonshot-v1-8k",
         "OpenAI": "gpt-4o-mini",
         "Qwen": "qwen-plus",

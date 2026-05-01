@@ -25,6 +25,8 @@ class AgentRepository:
         item["tools"] = _json_loads(item.get("tools"), [])
         item["output_schema"] = _json_loads(item.get("output_schema"), None)
         item["enabled"] = bool(item.get("enabled"))
+        item["provider_id"] = item.get("provider_id")
+        item["max_tokens"] = item.get("max_tokens") or 2000
         return item
 
     def find_all(self, enabled: Optional[bool] = None) -> list[dict]:
@@ -48,16 +50,18 @@ class AgentRepository:
             cursor = conn.execute(
                 """
                 INSERT INTO agent_definitions
-                    (name, role, description, system_prompt, model, temperature, tools, output_schema, enabled)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (name, role, description, system_prompt, provider_id, model, temperature, max_tokens, tools, output_schema, enabled)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     data["name"],
                     data["role"],
                     data.get("description"),
                     data["system_prompt"],
+                    data.get("provider_id"),
                     data.get("model", "gpt-4o-mini"),
                     data.get("temperature", 0.3),
+                    data.get("max_tokens", 2000),
                     _json_dumps(data.get("tools", [])),
                     _json_dumps(data.get("output_schema")) if data.get("output_schema") is not None else None,
                     1 if data.get("enabled", True) else 0,
@@ -73,7 +77,7 @@ class AgentRepository:
     def update(self, agent_id: int, data: dict) -> Optional[dict]:
         fields = []
         params: list[Any] = []
-        for key in ("role", "description", "system_prompt", "model", "temperature"):
+        for key in ("role", "description", "system_prompt", "provider_id", "model", "temperature", "max_tokens"):
             if key in data:
                 fields.append(f"{key} = ?")
                 params.append(data[key])

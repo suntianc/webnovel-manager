@@ -5,6 +5,8 @@ from datetime import datetime
 from typing import AsyncGenerator
 
 from app.repositories.workflow_repository import WorkflowRepository
+from app.services.material_extraction_service import MaterialExtractionService
+from app.services.novel_analysis_service import NovelAnalysisService
 from app.services.workflow_templates import WorkflowNode, get_workflow_template
 
 
@@ -18,6 +20,8 @@ def _now() -> str:
 class WorkflowService:
     def __init__(self):
         self.repo = WorkflowRepository()
+        self.material_extraction_service = MaterialExtractionService()
+        self.novel_analysis_service = NovelAnalysisService()
 
     def start_workflow(self, data: dict) -> dict:
         run_id = self.repo.create_run(data)
@@ -55,6 +59,9 @@ class WorkflowService:
         tasks = self.repo.list_tasks(run_id)
         total = max(1, len(tasks))
         for index, task in enumerate(tasks, start=1):
+            if task["status"] in {"completed", "skipped"}:
+                continue
+
             latest = self.repo.find_run(run_id)
             if latest and latest["status"] == "canceled":
                 self.repo.create_event(run_id, {"event_type": "workflow_canceled", "message": "工作流已取消"})
@@ -193,40 +200,85 @@ class WorkflowService:
             },
         )
 
-        for progress in (25, 60, 90):
-            time.sleep(0.2)
-            self.repo.update_task(task["id"], {"progress": progress})
-            self.repo.update_run(run_id, {"progress": min(99, int(((index - 1) + progress / 100) / total * 100))})
+        try:
+            for progress in (25, 60, 90):
+                time.sleep(0.2)
+                self.repo.update_task(task["id"], {"progress": progress})
+                self.repo.update_run(run_id, {"progress": min(99, int(((index - 1) + progress / 100) / total * 100))})
+                self.repo.create_event(
+                    run_id,
+                    {
+                        "task_id": task["id"],
+                        "event_type": "task_progress",
+                        "message": f"{task['node_name']} 进度 {progress}%",
+                        "payload": {"progress": progress},
+                    },
+                )
+
+            artifact_id = self._create_task_artifact(run_id, task)
+            self.repo.update_task(
+                task["id"],
+                {"status": "completed", "progress": 100, "output_ref": str(artifact_id), "completed_at": _now()},
+            )
+            self.repo.update_run(run_id, {"progress": min(99, int(index / total * 100))})
             self.repo.create_event(
                 run_id,
                 {
                     "task_id": task["id"],
-                    "event_type": "task_progress",
-                    "message": f"{task['node_name']} 进度 {progress}%",
-                    "payload": {"progress": progress},
+                    "event_type": "task_completed",
+                    "message": f"{task['node_name']} 已完成",
+                    "payload": {"artifact_id": artifact_id},
                 },
             )
-
-        artifact_id = self._create_task_artifact(run_id, task)
-        self.repo.update_task(
-            task["id"],
-            {"status": "completed", "progress": 100, "output_ref": str(artifact_id), "completed_at": _now()},
-        )
-        self.repo.update_run(run_id, {"progress": min(99, int(index / total * 100))})
-        self.repo.create_event(
-            run_id,
-            {
-                "task_id": task["id"],
-                "event_type": "task_completed",
-                "message": f"{task['node_name']} 已完成",
-                "payload": {"artifact_id": artifact_id},
-            },
-        )
+        except Exception as exc:
+            message = str(exc)[:500]
+            self.repo.update_task(
+                task["id"],
+                {"status": "failed", "progress": 100, "error_message": message, "completed_at": _now()},
+            )
+            self.repo.update_run(
+                run_id,
+                {
+                    "status": "failed",
+                    "error_message": message,
+                    "current_node": task["node_name"],
+                    "completed_at": _now(),
+                },
+            )
+            self.repo.create_event(
+                run_id,
+                {
+                    "task_id": task["id"],
+                    "event_type": "task_failed",
+                    "level": "error",
+                    "message": f"{task['node_name']} 执行失败：{message}",
+                    "payload": {"error": message},
+                },
+            )
+            raise
 
     def _create_task_artifact(self, run_id: int, task: dict) -> int | None:
         artifact_type = self._artifact_type_for_task(task["task_type"])
         if artifact_type is None:
             return None
+        if task["task_type"] == "material_extraction":
+            run = self.repo.find_run(run_id)
+            if run is None:
+                raise RuntimeError("Workflow run not found")
+            return self.material_extraction_service.create_artifact_for_task(run, task)
+        if task["task_type"] in {
+            "parse_novel",
+            "chapter_batch_notes",
+            "arc_summary",
+            "novel_profile",
+            "character_analysis",
+            "worldbuilding_analysis",
+            "plot_analysis",
+        }:
+            run = self.repo.find_run(run_id)
+            if run is None:
+                raise RuntimeError("Workflow run not found")
+            return self.novel_analysis_service.create_artifact_for_task(run, task)
         title = self._artifact_title(task)
         artifact_id = self.repo.create_artifact(
             {

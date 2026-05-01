@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { artifactsApi, materialsApi, novelsApi, providersApi, tagsApi, searchApi, categoriesApi, statsApi, workflowsApi } from '@/lib/api';
-import type { AIProviderCreate, AIProviderUpdate, MaterialCreate, MaterialUpdate, MaterialListParams, NovelListParams, TagCreate, SearchParams } from '@/types';
+import { agentsApi, artifactsApi, materialsApi, novelsApi, providersApi, tagsApi, searchApi, categoriesApi, statsApi, workflowsApi } from '@/lib/api';
+import type { AgentDefinitionUpdate, AIProviderCreate, AIProviderUpdate, MaterialCreate, MaterialUpdate, MaterialListParams, NovelListParams, TagCreate, SearchParams } from '@/types';
 
 export function useMaterials(params?: MaterialListParams) {
   return useQuery({
@@ -234,6 +234,24 @@ export function useArtifacts(params?: { run_id?: number; artifact_type?: string;
     queryKey: ['artifacts', params],
     queryFn: () => artifactsApi.list(params),
     enabled: !!params?.run_id,
+  });
+}
+
+export function useAgents(enabled?: boolean) {
+  return useQuery({
+    queryKey: ['agents', enabled],
+    queryFn: () => agentsApi.list(enabled),
+  });
+}
+
+export function useUpdateAgent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: AgentDefinitionUpdate }) =>
+      agentsApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+    },
   });
 }
 

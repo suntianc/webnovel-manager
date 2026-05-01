@@ -8,8 +8,10 @@ class AgentDefinitionBase(BaseModel):
     role: str = Field(..., min_length=1, max_length=80)
     description: Optional[str] = None
     system_prompt: str = Field(..., min_length=1)
+    provider_id: Optional[int] = None
     model: str = "gpt-4o-mini"
     temperature: float = Field(default=0.3, ge=0, le=2)
+    max_tokens: int = Field(default=2000, ge=1, le=64000)
     tools: list[str] = Field(default_factory=list)
     output_schema: Optional[dict[str, Any]] = None
     enabled: bool = True
@@ -23,8 +25,10 @@ class AgentDefinitionUpdate(BaseModel):
     role: Optional[str] = Field(None, min_length=1, max_length=80)
     description: Optional[str] = None
     system_prompt: Optional[str] = Field(None, min_length=1)
+    provider_id: Optional[int] = None
     model: Optional[str] = None
     temperature: Optional[float] = Field(None, ge=0, le=2)
+    max_tokens: Optional[int] = Field(None, ge=1, le=64000)
     tools: Optional[list[str]] = None
     output_schema: Optional[dict[str, Any]] = None
     enabled: Optional[bool] = None

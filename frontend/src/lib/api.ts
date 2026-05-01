@@ -19,6 +19,8 @@ import type {
   WorkflowTask,
   WorkflowEvent,
   ArtifactListResponse,
+  AgentDefinition,
+  AgentDefinitionUpdate,
   AIProvider,
   AIProviderCreate,
   AIProviderUpdate,
@@ -264,6 +266,24 @@ export const artifactsApi = {
     if (params?.limit) searchParams.set('limit', String(params.limit));
     const response = await fetch(`${API_BASE}/api/artifacts/?${searchParams}`);
     return handleResponse<ArtifactListResponse>(response);
+  },
+};
+
+export const agentsApi = {
+  list: async (enabled?: boolean): Promise<AgentDefinition[]> => {
+    const searchParams = new URLSearchParams();
+    if (enabled !== undefined) searchParams.set('enabled', String(enabled));
+    const response = await fetch(`${API_BASE}/api/agents/?${searchParams}`);
+    return handleResponse<AgentDefinition[]>(response);
+  },
+
+  update: async (id: number, data: AgentDefinitionUpdate): Promise<AgentDefinition> => {
+    const response = await fetch(`${API_BASE}/api/agents/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<AgentDefinition>(response);
   },
 };
 

@@ -12,13 +12,16 @@ def ensure_agent_tables() -> None:
                 role TEXT NOT NULL,
                 description TEXT,
                 system_prompt TEXT NOT NULL,
+                provider_id INTEGER,
                 model TEXT DEFAULT 'gpt-4o-mini',
                 temperature REAL DEFAULT 0.3,
+                max_tokens INTEGER DEFAULT 2000,
                 tools TEXT DEFAULT '[]',
                 output_schema TEXT,
                 enabled INTEGER DEFAULT 1,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (provider_id) REFERENCES ai_providers(id) ON DELETE SET NULL
             );
 
             CREATE TABLE IF NOT EXISTS workflow_runs (
@@ -144,8 +147,17 @@ def ensure_agent_tables() -> None:
             CREATE INDEX IF NOT EXISTS idx_novel_parts_novel ON novel_parts(novel_id, part_index);
             """
         )
+        _migrate_agent_definitions(conn)
         _seed_agents(conn)
         conn.commit()
+
+
+def _migrate_agent_definitions(conn) -> None:
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(agent_definitions)").fetchall()}
+    if "provider_id" not in columns:
+        conn.execute("ALTER TABLE agent_definitions ADD COLUMN provider_id INTEGER")
+    if "max_tokens" not in columns:
+        conn.execute("ALTER TABLE agent_definitions ADD COLUMN max_tokens INTEGER DEFAULT 2000")
 
 
 def _seed_agents(conn) -> None:
@@ -208,7 +220,11 @@ def _seed_agents(conn) -> None:
             "MaterialAgent",
             "material",
             "从作品档案和证据中提炼可入库素材。",
-            "你是素材提炼 Agent，负责生成分类、标签、摘要和证据链清晰的素材候选。",
+            (
+                "你是素材提炼 Agent，负责从网文原文中提炼可复用素材候选。"
+                "只根据输入文本和上下文输出，不编造来源；证据摘录必须来自原文。"
+                "优先抽取人物、设定、剧情桥段、物品、势力、地点、金句和可复用爽点。"
+            ),
         ),
     ]
     for name, role, description, prompt in agents:

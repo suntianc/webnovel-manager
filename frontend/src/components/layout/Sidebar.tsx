@@ -117,13 +117,17 @@ export function Sidebar() {
             >
               <Icon name="moon" size={16} />
             </button>
-            <button
+            <Link
               aria-label="设置"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-near-black text-[#a1a1a6] transition active:scale-[0.96]"
-              type="button"
+              className={`flex h-9 w-9 items-center justify-center rounded-full transition active:scale-[0.96] ${
+                pathname.startsWith("/settings")
+                  ? "bg-apple-blue text-white"
+                  : "bg-near-black text-[#a1a1a6]"
+              }`}
+              href="/settings/workflows"
             >
               <Icon name="settings" size={16} />
-            </button>
+            </Link>
           </>
         )}
       </div>
